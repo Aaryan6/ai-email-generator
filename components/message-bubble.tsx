@@ -1,6 +1,7 @@
 "use client";
 
 import { Bot, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface MessageBubbleProps {
   role: "user" | "assistant" | "system" | "data";
@@ -46,70 +47,39 @@ export function MessageBubble({ role, content, parts }: MessageBubbleProps) {
   const toolParts = (parts ?? []).filter(isToolPart);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: "12px",
-        padding: "16px",
-        flexDirection: isUser ? "row-reverse" : "row",
-      }}
-    >
+    <div className={cn("flex gap-3 px-4 py-3", isUser && "flex-row-reverse")}>
       <div
-        style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          backgroundColor: isUser ? "#6366f1" : "#1f2937",
-          color: "#fff",
-        }}
+        className={cn(
+          "mt-0.5 grid size-8 shrink-0 place-items-center rounded-full border border-border/70",
+          isUser ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+        )}
       >
-        {isUser ? <User size={16} /> : <Bot size={16} />}
+        {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
       </div>
       <div
-        style={{
-          maxWidth: "80%",
-          padding: "12px 16px",
-          borderRadius: "12px",
-          backgroundColor: isUser ? "#6366f1" : "#1f2937",
-          color: isUser ? "#fff" : "#e5e7eb",
-          fontSize: "14px",
-          lineHeight: "1.6",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-        }}
+        className={cn(
+          "max-w-[88%] rounded-2xl border px-4 py-3 text-sm leading-6 whitespace-pre-wrap break-words",
+          isUser
+            ? "border-primary/70 bg-primary text-primary-foreground"
+            : "border-border/70 bg-card/90 text-foreground",
+        )}
       >
         {content}
         {!isUser && toolParts.length > 0 ? (
-          <div style={{ marginTop: content ? "10px" : "0", display: "grid", gap: "8px" }}>
+          <div className={cn("grid gap-2", content && "mt-3")}>
             {toolParts.map((part, index) => {
               const label = getToolLabel(part);
               const state = getToolState(part);
               return (
                 <div
                   key={`${label}-${index}`}
-                  style={{
-                    border: "1px solid #374151",
-                    borderRadius: "10px",
-                    padding: "10px",
-                    backgroundColor: "#111827",
-                  }}
+                  className="rounded-xl border border-border/70 bg-muted/35 px-3 py-2"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "10px",
-                    }}
-                  >
-                    <span style={{ fontSize: "12px", color: "#d1d5db", fontWeight: 600 }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold text-foreground/90">
                       Tool: {label}
                     </span>
-                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>{state}</span>
+                    <span className="text-[11px] text-muted-foreground">{state}</span>
                   </div>
                 </div>
               );

@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Eye, Code2, Copy, Check, Download, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmailPreview } from "./email-preview";
 import { CodeViewer } from "./code-viewer";
 
@@ -41,244 +44,83 @@ export function ArtifactPanel({ email, compilationError }: ArtifactPanelProps) {
 
   if (!email) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          backgroundColor: "#0d1117",
-          color: "#6b7280",
-          textAlign: "center",
-          padding: "32px",
-          gap: "16px",
-        }}
-      >
-        <div
-          style={{
-            width: "80px",
-            height: "80px",
-            borderRadius: "16px",
-            backgroundColor: "#1f2937",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "32px",
-          }}
-        >
-          <Eye size={32} color="#4b5563" />
-        </div>
-        <h3
-          style={{
-            fontSize: "16px",
-            fontWeight: 600,
-            color: "#9ca3af",
-            margin: 0,
-          }}
-        >
-          Email Preview
-        </h3>
-        <p style={{ fontSize: "14px", maxWidth: "280px", margin: 0 }}>
-          Generated email templates will appear here with a live preview and
-          source code.
-        </p>
+      <div className="grid h-full place-items-center bg-background/40 px-6">
+        <Card className="w-full max-w-md border-border/70 bg-card/85 text-center backdrop-blur">
+          <CardHeader className="items-center gap-3">
+            <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-border/70 bg-muted/50">
+              <Eye className="size-7 text-muted-foreground" />
+            </div>
+            <CardTitle>Email preview</CardTitle>
+            <CardDescription>
+              Generated templates appear here with live rendering and source code.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        backgroundColor: "#0d1117",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 16px",
-          borderBottom: "1px solid #1f2937",
-          flexWrap: "wrap",
-          gap: "8px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            minWidth: 0,
-            flex: "1 1 auto",
-          }}
-        >
-          <h3
-            style={{
-              fontSize: "14px",
-              fontWeight: 600,
-              color: "#f9fafb",
-              margin: 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {email.name}
-          </h3>
-          <span
-            style={{
-              fontSize: "12px",
-              color: "#6b7280",
-              padding: "2px 8px",
-              backgroundColor: "#1f2937",
-              borderRadius: "4px",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: "200px",
-            }}
-          >
+    <div className="flex h-full flex-col bg-background/60">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3 md:px-5">
+        <div className="min-w-0 space-y-1">
+          <h3 className="truncate text-sm font-semibold md:text-base">{email.name}</h3>
+          <Badge variant="outline" className="max-w-full truncate">
             {email.description}
-          </span>
+          </Badge>
         </div>
-        <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-          {/* Tabs */}
-          <button
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button
             onClick={() => setActiveTab("preview")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "6px 14px",
-              borderRadius: "6px",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "13px",
-              backgroundColor:
-                activeTab === "preview" ? "#374151" : "transparent",
-              color: activeTab === "preview" ? "#fff" : "#9ca3af",
-            }}
+            variant={activeTab === "preview" ? "secondary" : "ghost"}
+            size="sm"
           >
-            <Eye size={14} />
+            <Eye data-icon="inline-start" />
             Preview
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setActiveTab("code")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "6px 14px",
-              borderRadius: "6px",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "13px",
-              backgroundColor: activeTab === "code" ? "#374151" : "transparent",
-              color: activeTab === "code" ? "#fff" : "#9ca3af",
-            }}
+            variant={activeTab === "code" ? "secondary" : "ghost"}
+            size="sm"
           >
-            <Code2 size={14} />
+            <Code2 data-icon="inline-start" />
             Code
-          </button>
-          <div
-            style={{
-              width: "1px",
-              backgroundColor: "#374151",
-              margin: "0 4px",
-            }}
-          />
-          <button
-            onClick={handleCopyHtml}
-            disabled={!email.htmlCode}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "6px 14px",
-              borderRadius: "6px",
-              border: "1px solid #374151",
-              backgroundColor: "transparent",
-              color: !email.htmlCode ? "#4b5563" : "#d1d5db",
-              cursor: !email.htmlCode ? "not-allowed" : "pointer",
-              fontSize: "13px",
-            }}
-          >
-            {copiedHtml ? <Check size={14} /> : <Copy size={14} />}
-            {copiedHtml ? "Copied!" : "Copy HTML"}
-          </button>
-          <button
+          </Button>
+          <Button onClick={handleCopyHtml} disabled={!email.htmlCode} variant="outline" size="sm">
+            {copiedHtml ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+            {copiedHtml ? "Copied" : "Copy HTML"}
+          </Button>
+          <Button
             onClick={handleDownloadHtml}
             disabled={!email.htmlCode}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "6px 14px",
-              borderRadius: "6px",
-              border: "1px solid #374151",
-              backgroundColor: "transparent",
-              color: !email.htmlCode ? "#4b5563" : "#d1d5db",
-              cursor: !email.htmlCode ? "not-allowed" : "pointer",
-              fontSize: "13px",
-            }}
+            variant="outline"
+            size="icon-sm"
+            aria-label="Download HTML"
           >
-            <Download size={14} />
-          </button>
+            <Download />
+          </Button>
         </div>
       </div>
 
-      {/* Compilation error banner */}
       {compilationError && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "10px",
-            padding: "12px 16px",
-            backgroundColor: "#451a03",
-            borderBottom: "1px solid #92400e",
-            color: "#fbbf24",
-            fontSize: "13px",
-            lineHeight: "1.5",
-          }}
-        >
-          <AlertTriangle
-            size={16}
-            style={{ flexShrink: 0, marginTop: "2px" }}
-          />
+        <div className="flex items-start gap-3 border-b border-amber-700/30 bg-amber-500/10 px-4 py-3 text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <div>
             <strong>Compilation Error:</strong> {compilationError}
-            <div style={{ color: "#d97706", marginTop: "4px", fontSize: "12px" }}>
-              The generated code had an error. Try asking the AI to fix it or
-              regenerate the template.
+            <div className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80">
+              The generated code had an error. Ask the AI to fix it or regenerate the template.
             </div>
           </div>
         </div>
       )}
 
-      {/* Content */}
-      <div style={{ flex: 1, overflow: "hidden" }}>
+      <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === "preview" ? (
           email.htmlCode ? (
             <EmailPreview htmlCode={email.htmlCode} />
           ) : (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "100%",
-                color: "#6b7280",
-                fontSize: "14px",
-              }}
-            >
-              No preview available — check the Code tab for the generated
-              source.
+            <div className="grid h-full place-items-center px-6 text-center text-sm text-muted-foreground">
+              No preview available. Check the Code tab for the generated source.
             </div>
           )
         ) : (

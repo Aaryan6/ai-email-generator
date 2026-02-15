@@ -3,6 +3,7 @@
 import { Highlight, themes } from "prism-react-renderer";
 import { Copy, Check } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface CodeViewerProps {
   code: string;
@@ -19,40 +20,23 @@ export function CodeViewer({ code, language = "tsx" }: CodeViewerProps) {
   };
 
   return (
-    <div style={{ position: "relative", height: "100%", overflow: "auto" }}>
-      <button
-        onClick={handleCopy}
-        style={{
-          position: "absolute",
-          top: "12px",
-          right: "12px",
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          padding: "6px 12px",
-          borderRadius: "6px",
-          border: "1px solid #374151",
-          backgroundColor: "#1f2937",
-          color: "#e5e7eb",
-          cursor: "pointer",
-          fontSize: "12px",
-          zIndex: 10,
-        }}
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
+    <div className="relative h-full overflow-auto">
+      <Button onClick={handleCopy} variant="outline" size="sm" className="absolute right-3 top-3 z-10">
+        {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
         {copied ? "Copied!" : "Copy Code"}
-      </button>
+      </Button>
       <Highlight theme={themes.nightOwl} code={code.trim()} language={language}>
         {({ style, tokens, getLineProps, getTokenProps }) => (
           <pre
             style={{
               ...style,
               margin: 0,
-              padding: "16px",
+              padding: "18px 16px 16px",
               fontSize: "13px",
               lineHeight: "1.6",
               height: "100%",
               overflow: "auto",
+              borderRadius: "0.9rem",
             }}
           >
             {tokens.map((line, i) => (
@@ -63,7 +47,7 @@ export function CodeViewer({ code, language = "tsx" }: CodeViewerProps) {
                     width: "3em",
                     textAlign: "right",
                     paddingRight: "1em",
-                    color: "#636d83",
+                    color: "#95a0b5",
                     userSelect: "none",
                   }}
                 >

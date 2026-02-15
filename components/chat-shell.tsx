@@ -4,11 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import type { UIMessage } from "ai";
+import { LogOut } from "lucide-react";
 import { ChatPanel, EmailData } from "@/components/chat-panel";
 import { ArtifactPanel, EmailArtifact } from "@/components/artifact-panel";
 import { HistorySidebar, type HistoryChat } from "@/components/history-sidebar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 interface ChatShellProps {
   initialChatId?: string;
@@ -159,110 +163,47 @@ export function ChatShell({ initialChatId, initialMessages = [] }: ChatShellProp
 
   if (sessionPending) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          backgroundColor: "#0d1117",
-          color: "#9ca3af",
-          fontSize: "14px",
-        }}
-      >
-        Checking session...
+      <div className="flex min-h-screen items-center justify-center bg-background px-6">
+        <Card className="w-full max-w-sm border-border/70 bg-card/80 backdrop-blur">
+          <CardHeader>
+            <CardTitle>Checking session</CardTitle>
+            <CardDescription>Please wait while we authenticate your account.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          backgroundColor: "#0d1117",
-          color: "#f9fafb",
-          padding: "24px",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "420px",
-            border: "1px solid #1f2937",
-            borderRadius: "16px",
-            padding: "24px",
-            backgroundColor: "#111827",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-          }}
-        >
-          <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700 }}>
-            Sign in to continue
-          </h1>
-          <p style={{ margin: 0, color: "#9ca3af", fontSize: "14px" }}>
-            Use Google to access your saved chats and generated emails.
-          </p>
-          <button
-            onClick={handleGoogleSignIn}
-            style={{
-              marginTop: "8px",
-              border: "1px solid #374151",
-              borderRadius: "10px",
-              backgroundColor: "#1f2937",
-              color: "#f9fafb",
-              fontSize: "14px",
-              fontWeight: 600,
-              padding: "10px 12px",
-              cursor: "pointer",
-            }}
-          >
-            Continue with Google
-          </button>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-6 py-10">
+        <Card className="w-full max-w-md border-border/70 bg-card/90 backdrop-blur">
+          <CardHeader className="space-y-3">
+            <CardTitle className="text-2xl">Sign in to continue</CardTitle>
+            <CardDescription>
+              Use Google to access your saved chats and generated email templates.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleGoogleSignIn} className="w-full" size="lg">
+              Continue with Google
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <div
-        style={{
-          position: "fixed",
-          top: "12px",
-          right: "12px",
-          zIndex: 60,
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          backgroundColor: "#111827",
-          border: "1px solid #1f2937",
-          borderRadius: "999px",
-          padding: "6px 8px 6px 12px",
-        }}
-      >
-        <span style={{ color: "#9ca3af", fontSize: "12px" }}>
+    <div className="relative flex h-screen overflow-hidden bg-gradient-to-br from-background via-background to-muted/30">
+      <div className="fixed right-3 top-3 z-50 hidden items-center gap-2 rounded-4xl border border-border/70 bg-card/95 px-2 py-1.5 shadow-sm backdrop-blur md:flex">
+        <p className="max-w-44 truncate px-2 text-xs text-muted-foreground">
           {session.user.email ?? "Signed in"}
-        </span>
-        <button
-          onClick={handleSignOut}
-          style={{
-            border: "none",
-            borderRadius: "999px",
-            backgroundColor: "#1f2937",
-            color: "#f3f4f6",
-            fontSize: "12px",
-            fontWeight: 600,
-            padding: "6px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Sign Out
-        </button>
+        </p>
+        <Button onClick={handleSignOut} size="sm" variant="secondary">
+          <LogOut data-icon="inline-start" />
+          Sign out
+        </Button>
       </div>
 
       <HistorySidebar
@@ -274,55 +215,29 @@ export function ChatShell({ initialChatId, initialMessages = [] }: ChatShellProp
         onDeleteChat={handleDeleteChat}
       />
 
-      <div
-        className="mobile-tabs"
-        style={{
-          display: "none",
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 30,
-          borderTop: "1px solid #1f2937",
-          backgroundColor: "#111827",
-        }}
-      >
-        <button
+      <div className="fixed inset-x-3 bottom-3 z-30 flex rounded-4xl border border-border/70 bg-card/95 p-1 shadow-sm backdrop-blur md:hidden">
+        <Button
           onClick={() => setActivePanel("chat")}
-          style={{
-            flex: 1,
-            padding: "12px",
-            border: "none",
-            backgroundColor: activePanel === "chat" ? "#1f2937" : "transparent",
-            color: activePanel === "chat" ? "#6366f1" : "#9ca3af",
-            fontSize: "13px",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
+          variant={activePanel === "chat" ? "secondary" : "ghost"}
+          className="flex-1"
         >
           Chat
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => setActivePanel("preview")}
-          style={{
-            flex: 1,
-            padding: "12px",
-            border: "none",
-            backgroundColor: activePanel === "preview" ? "#1f2937" : "transparent",
-            color: activePanel === "preview" ? "#6366f1" : "#9ca3af",
-            fontSize: "13px",
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
+          variant={activePanel === "preview" ? "secondary" : "ghost"}
+          className="flex-1"
         >
           Preview
-        </button>
+        </Button>
       </div>
 
       <div
-        className="chat-panel-container"
+        className={cn(
+          "h-full w-full shrink-0 border-r border-border/60 md:min-w-[360px] md:max-w-[460px] md:w-[38vw]",
+          activePanel !== "chat" && "hidden md:block",
+        )}
         data-active={activePanel === "chat"}
-        style={{ width: "420px", minWidth: "360px", flexShrink: 0, height: "100%" }}
       >
         <ChatPanel
           key={chatId}
@@ -336,9 +251,8 @@ export function ChatShell({ initialChatId, initialMessages = [] }: ChatShellProp
       </div>
 
       <div
-        className="artifact-panel-container"
+        className={cn("min-w-0 flex-1", activePanel !== "preview" && "hidden md:block")}
         data-active={activePanel === "preview"}
-        style={{ flex: 1, height: "100%", minWidth: 0 }}
       >
         <ArtifactPanel email={currentEmail} compilationError={compilationError} />
       </div>

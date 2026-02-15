@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
 import { getToken } from "@/lib/auth-server";
 import "./globals.css";
 
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
+
 const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-geist-sans",
 });
 
 export const metadata: Metadata = {
@@ -22,8 +24,8 @@ export default async function RootLayout({
   const initialToken = await getToken();
 
   return (
-    <html lang="en">
-      <body className={`${geist.className}`} style={{ margin: 0, padding: 0 }}>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
+      <body className={`${geist.className} min-h-screen bg-background antialiased`}>
         <ConvexClientProvider initialToken={initialToken ?? null}>
           {children}
         </ConvexClientProvider>

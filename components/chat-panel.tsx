@@ -3,6 +3,10 @@
 import { useChat } from "@ai-sdk/react";
 import { Send, PanelLeftOpen, Plus, Loader2 } from "lucide-react";
 import { useEffect, useRef, useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { MessageBubble } from "./message-bubble";
 import type { UIMessage } from "ai";
 
@@ -60,6 +64,12 @@ export function ChatPanel({
   });
 
   const isLoading = status === "streaming" || status === "submitted";
+  const suggestions = [
+    "Welcome email with hero banner and CTA",
+    "Password reset notification",
+    "Monthly newsletter with sections",
+    "Order confirmation with details",
+  ];
 
   // Detect email generation from tool parts in messages
   useEffect(() => {
@@ -119,143 +129,43 @@ export function ChatPanel({
   }, [messages]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        backgroundColor: "#111827",
-        borderRight: "1px solid #1f2937",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 16px",
-          borderBottom: "1px solid #1f2937",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <button
-            onClick={onToggleSidebar}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "36px",
-              height: "36px",
-              border: "none",
-              borderRadius: "8px",
-              backgroundColor: "transparent",
-              color: "#9ca3af",
-              cursor: "pointer",
-            }}
-          >
-            <PanelLeftOpen size={18} />
-          </button>
-          <h2
-            style={{
-              fontSize: "15px",
-              fontWeight: 600,
-              color: "#f9fafb",
-              margin: 0,
-            }}
-          >
-            AI Email Generator
-          </h2>
+    <div className="flex h-full flex-col bg-card/80 backdrop-blur">
+      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Button onClick={onToggleSidebar} variant="ghost" size="icon-sm" aria-label="Open chats">
+            <PanelLeftOpen />
+          </Button>
+          <h2 className="text-sm font-semibold">AI Email Generator</h2>
+          <Badge variant="outline" className="hidden sm:inline-flex">
+            React Email
+          </Badge>
         </div>
-        <button
-          onClick={handleNewChat}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "6px 14px",
-            border: "1px solid #374151",
-            borderRadius: "8px",
-            backgroundColor: "transparent",
-            color: "#d1d5db",
-            cursor: "pointer",
-            fontSize: "13px",
-          }}
-        >
-          <Plus size={14} />
+        <Button onClick={handleNewChat} variant="outline" size="sm">
+          <Plus data-icon="inline-start" />
           New Chat
-        </button>
+        </Button>
       </div>
 
-      {/* Messages */}
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "8px 0",
-        }}
-      >
+      <div className="flex-1 overflow-auto px-1 py-2">
         {messages.length === 0 && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: "#6b7280",
-              textAlign: "center",
-              padding: "32px",
-              gap: "16px",
-            }}
-          >
-            <div style={{ fontSize: "48px", lineHeight: 1 }}>&#9993;</div>
-            <h3
-              style={{
-                fontSize: "18px",
-                fontWeight: 600,
-                color: "#e5e7eb",
-                margin: 0,
-              }}
-            >
-              Create beautiful emails with AI
-            </h3>
-            <p style={{ fontSize: "14px", maxWidth: "300px", margin: 0 }}>
-              Describe the email you want and the AI will generate a
-              professional React Email template for you.
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+            <div className="grid size-14 place-items-center rounded-2xl border border-border/60 bg-muted/40 text-2xl">
+              ✉
+            </div>
+            <h3 className="text-lg font-semibold">Create beautiful emails with AI</h3>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              Describe the campaign, tone, and layout. We will generate a production-ready React Email template.
             </p>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                width: "100%",
-                maxWidth: "320px",
-                marginTop: "8px",
-              }}
-            >
-              {[
-                "Welcome email with hero banner and CTA",
-                "Password reset notification",
-                "Monthly newsletter with sections",
-                "Order confirmation with details",
-              ].map((suggestion) => (
-                <button
+            <div className="mt-2 grid w-full max-w-sm gap-2">
+              {suggestions.map((suggestion) => (
+                <Button
                   key={suggestion}
                   onClick={() => setInput(suggestion)}
-                  style={{
-                    padding: "10px 14px",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                    backgroundColor: "transparent",
-                    color: "#d1d5db",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    textAlign: "left",
-                  }}
+                  variant="outline"
+                  className="h-auto justify-start whitespace-normal py-2 text-left text-xs"
                 >
                   {suggestion}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -271,27 +181,17 @@ export function ChatPanel({
           />
         ))}
         {isLoading && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "16px",
-              color: "#9ca3af",
-              fontSize: "14px",
-            }}
-          >
-            <Loader2 size={16} className="animate-spin" />
+          <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
             Generating...
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div style={{ padding: "16px", borderTop: "1px solid #1f2937" }}>
-        <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
-          <textarea
+      <div className="border-t border-border/60 bg-background/70 px-4 py-4 pb-24 md:pb-4">
+        <div className="flex items-end gap-2">
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -302,41 +202,17 @@ export function ChatPanel({
             }}
             placeholder="Describe the email you want to create..."
             rows={2}
-            style={{
-              flex: 1,
-              padding: "12px 16px",
-              borderRadius: "12px",
-              border: "1px solid #374151",
-              backgroundColor: "#1f2937",
-              color: "#f9fafb",
-              fontSize: "14px",
-              lineHeight: "1.5",
-              resize: "none",
-              outline: "none",
-              fontFamily: "inherit",
-            }}
+            className="max-h-40 min-h-[56px]"
           />
-          <button
+          <Button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "44px",
-              height: "44px",
-              borderRadius: "12px",
-              border: "none",
-              backgroundColor:
-                isLoading || !input.trim() ? "#374151" : "#6366f1",
-              color: isLoading || !input.trim() ? "#6b7280" : "#fff",
-              cursor:
-                isLoading || !input.trim() ? "not-allowed" : "pointer",
-              flexShrink: 0,
-            }}
+            size="icon"
+            className={cn("mb-1 shrink-0", !input.trim() && "opacity-60")}
+            aria-label="Send message"
           >
-            <Send size={18} />
-          </button>
+            <Send className="size-4" />
+          </Button>
         </div>
       </div>
     </div>

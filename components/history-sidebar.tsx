@@ -1,6 +1,8 @@
 "use client";
 
 import { X, MessageSquare, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export interface HistoryChat {
   chatId: string;
@@ -31,84 +33,22 @@ export function HistorySidebar({
     <>
       <div
         onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          zIndex: 40,
-        }}
+        className="fixed inset-0 z-40 bg-background/60 backdrop-blur-[2px]"
       />
 
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: "320px",
-          backgroundColor: "#111827",
-          borderRight: "1px solid #1f2937",
-          zIndex: 50,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px",
-            borderBottom: "1px solid #1f2937",
-          }}
-        >
-          <h3
-            style={{
-              fontSize: "15px",
-              fontWeight: 600,
-              color: "#f9fafb",
-              margin: 0,
-            }}
-          >
-            Chats
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "32px",
-              height: "32px",
-              border: "none",
-              borderRadius: "6px",
-              backgroundColor: "transparent",
-              color: "#9ca3af",
-              cursor: "pointer",
-            }}
-          >
-            <X size={18} />
-          </button>
+      <div className="fixed inset-y-0 left-0 z-50 flex w-[320px] max-w-[90vw] flex-col overflow-hidden border-r border-border/70 bg-card/95 backdrop-blur">
+        <div className="flex items-center justify-between border-b border-border/70 px-4 py-4">
+          <h3 className="text-sm font-semibold">Chats</h3>
+          <Button onClick={onClose} variant="ghost" size="icon-sm" aria-label="Close chat history">
+            <X />
+          </Button>
         </div>
 
-        <div style={{ flex: 1, overflow: "auto", padding: "8px" }}>
+        <div className="flex-1 space-y-1 overflow-auto p-2">
           {chats.length === 0 ? (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "200px",
-                color: "#6b7280",
-                textAlign: "center",
-                fontSize: "14px",
-                gap: "12px",
-              }}
-            >
-              <MessageSquare size={24} />
-              <p style={{ margin: 0 }}>No chats yet.</p>
+            <div className="flex h-52 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+              <MessageSquare className="size-5" />
+              <p>No chats yet.</p>
             </div>
           ) : (
             chats.map((chat) => {
@@ -116,73 +56,34 @@ export function HistorySidebar({
               return (
                 <div
                   key={chat.chatId}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    marginBottom: "4px",
-                    backgroundColor: isActive ? "#1f2937" : "transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                      "#1f2937";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                      isActive ? "#1f2937" : "transparent";
-                  }}
+                  className={cn(
+                    "group flex items-start justify-between rounded-xl border border-transparent px-3 py-2.5 transition-colors hover:border-border/70 hover:bg-muted/40",
+                    isActive && "border-border/70 bg-muted/50",
+                  )}
                 >
                   <div
                     onClick={() => onSelectChat(chat.chatId)}
-                    style={{ flex: 1, minWidth: 0 }}
+                    className="min-w-0 flex-1 cursor-pointer"
                   >
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 500,
-                        color: "#e5e7eb",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <div className="truncate text-sm font-medium">
                       {chat.title}
                     </div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        color: "#4b5563",
-                        marginTop: "4px",
-                      }}
-                    >
+                    <div className="mt-1 text-[11px] text-muted-foreground">
                       {new Date(chat.updatedAt).toLocaleString()}
                     </div>
                   </div>
-                  <button
+                  <Button
                     onClick={(e) => {
                       e.stopPropagation();
                       onDeleteChat(chat.chatId);
                     }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "28px",
-                      height: "28px",
-                      border: "none",
-                      borderRadius: "6px",
-                      backgroundColor: "transparent",
-                      color: "#6b7280",
-                      cursor: "pointer",
-                      flexShrink: 0,
-                      marginLeft: "8px",
-                    }}
+                    variant="ghost"
+                    size="icon-xs"
+                    className="ml-2 mt-0.5 text-muted-foreground hover:text-destructive"
+                    aria-label={`Delete ${chat.title}`}
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <Trash2 className="size-3.5" />
+                  </Button>
                 </div>
               );
             })
