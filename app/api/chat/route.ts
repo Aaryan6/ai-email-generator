@@ -3,11 +3,17 @@ import { z } from "zod";
 import { openrouter } from "@/lib/openrouter";
 import { EMAIL_SYSTEM_PROMPT } from "@/lib/email-system-prompt";
 import { compileEmail } from "@/lib/compile-email";
+import { fetchAuthMutation } from "@/lib/auth-server";
+import { api } from "@/convex/_generated/api";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { id, messages } = await req.json();
+
+  if (typeof id !== "string" || !Array.isArray(messages)) {
+    return Response.json({ error: "Invalid request payload" }, { status: 400 });
+  }
 
   const tools = {
     generate_email: tool({
@@ -62,5 +68,73 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(3),
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    originalMessages: messages,
+    onFinish: async ({ messages: responseMessages }) => {
+      const saved = await fetchAuthMutation(api.messages.saveChatMessages, {
+        chatId: id,
+        messages: responseMessages,
+      });
+
+      const insertedByMessageId = new Map(
+        saved.inserted.map((item: { id: string; dbId: string }) => [
+          item.id,
+          item.dbId,
+        ]),
+      );
+
+      for (const row of saved.inserted) {
+        if (row.role !== "assistant") {
+          continue;
+        }
+
+        for (const part of row.parts) {
+          if (
+            typeof part !== "object" ||
+            part === null ||
+            !("output" in part)
+          ) {
+            continue;
+          }
+
+          const output = (part as { output?: unknown }).output;
+          if (typeof output !== "object" || output === null) {
+            continue;
+          }
+
+          const email = output as {
+            success?: unknown;
+            name?: unknown;
+            description?: unknown;
+            tsxCode?: unknown;
+            htmlCode?: unknown;
+          };
+
+          if (
+            email.success !== true ||
+            typeof email.name !== "string" ||
+            typeof email.description !== "string" ||
+            typeof email.tsxCode !== "string" ||
+            typeof email.htmlCode !== "string"
+          ) {
+            continue;
+          }
+
+          const assistantMessageId = insertedByMessageId.get(row.id);
+          if (!assistantMessageId) {
+            continue;
+          }
+
+          await fetchAuthMutation(api.emails.createLinked, {
+            chatId: id,
+            assistantMessageId: assistantMessageId as never,
+            name: email.name,
+            description: email.description,
+            tsxCode: email.tsxCode,
+            htmlCode: email.htmlCode,
+          });
+        }
+      }
+    },
+  });
 }

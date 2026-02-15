@@ -1,36 +1,34 @@
 "use client";
 
-import { X, Mail, Trash2 } from "lucide-react";
+import { X, MessageSquare, Trash2 } from "lucide-react";
 
-export interface HistoryEmail {
-  id: string;
-  name: string;
-  description: string;
-  tsxCode: string;
-  htmlCode: string;
-  createdAt: number;
+export interface HistoryChat {
+  chatId: string;
+  title: string;
+  updatedAt: number;
 }
 
 interface HistorySidebarProps {
   open: boolean;
   onClose: () => void;
-  emails: HistoryEmail[];
-  onSelectEmail: (email: HistoryEmail) => void;
-  onDeleteEmail: (id: string) => void;
+  chats: HistoryChat[];
+  activeChatId?: string;
+  onSelectChat: (chatId: string) => void;
+  onDeleteChat: (chatId: string) => void;
 }
 
 export function HistorySidebar({
   open,
   onClose,
-  emails,
-  onSelectEmail,
-  onDeleteEmail,
+  chats,
+  activeChatId,
+  onSelectChat,
+  onDeleteChat,
 }: HistorySidebarProps) {
   if (!open) return null;
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -41,7 +39,6 @@ export function HistorySidebar({
         }}
       />
 
-      {/* Sidebar */}
       <div
         style={{
           position: "fixed",
@@ -57,7 +54,6 @@ export function HistorySidebar({
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -75,7 +71,7 @@ export function HistorySidebar({
               margin: 0,
             }}
           >
-            Email History
+            Chats
           </h3>
           <button
             onClick={onClose}
@@ -96,9 +92,8 @@ export function HistorySidebar({
           </button>
         </div>
 
-        {/* Email list */}
         <div style={{ flex: 1, overflow: "auto", padding: "8px" }}>
-          {emails.length === 0 ? (
+          {chats.length === 0 ? (
             <div
               style={{
                 display: "flex",
@@ -112,94 +107,85 @@ export function HistorySidebar({
                 gap: "12px",
               }}
             >
-              <Mail size={24} />
-              <p style={{ margin: 0 }}>No emails generated yet.</p>
+              <MessageSquare size={24} />
+              <p style={{ margin: 0 }}>No chats yet.</p>
             </div>
           ) : (
-            emails.map((email) => (
-              <div
-                key={email.id}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  marginBottom: "4px",
-                  backgroundColor: "transparent",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                    "#1f2937";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.backgroundColor =
-                    "transparent";
-                }}
-              >
+            chats.map((chat) => {
+              const isActive = activeChatId === chat.chatId;
+              return (
                 <div
-                  onClick={() => onSelectEmail(email)}
-                  style={{ flex: 1, minWidth: 0 }}
-                >
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      color: "#e5e7eb",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {email.name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#6b7280",
-                      marginTop: "4px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {email.description}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: "#4b5563",
-                      marginTop: "4px",
-                    }}
-                  >
-                    {new Date(email.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteEmail(email.id);
-                  }}
+                  key={chat.chatId}
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "28px",
-                    height: "28px",
-                    border: "none",
-                    borderRadius: "6px",
-                    backgroundColor: "transparent",
-                    color: "#6b7280",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    padding: "12px",
+                    borderRadius: "8px",
                     cursor: "pointer",
-                    flexShrink: 0,
-                    marginLeft: "8px",
+                    marginBottom: "4px",
+                    backgroundColor: isActive ? "#1f2937" : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
+                      "#1f2937";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.backgroundColor =
+                      isActive ? "#1f2937" : "transparent";
                   }}
                 >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))
+                  <div
+                    onClick={() => onSelectChat(chat.chatId)}
+                    style={{ flex: 1, minWidth: 0 }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 500,
+                        color: "#e5e7eb",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {chat.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "#4b5563",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {new Date(chat.updatedAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteChat(chat.chatId);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "28px",
+                      height: "28px",
+                      border: "none",
+                      borderRadius: "6px",
+                      backgroundColor: "transparent",
+                      color: "#6b7280",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      marginLeft: "8px",
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
       </div>

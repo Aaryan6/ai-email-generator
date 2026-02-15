@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { Send, PanelLeftOpen, Plus, Loader2 } from "lucide-react";
 import { useEffect, useRef, useMemo, useState } from "react";
 import { MessageBubble } from "./message-bubble";
+import type { UIMessage } from "ai";
 
 export interface EmailData {
   name: string;
@@ -15,7 +16,10 @@ export interface EmailData {
 }
 
 interface ChatPanelProps {
+  chatId: string;
+  initialMessages: UIMessage[];
   onEmailGenerated: (data: EmailData) => void;
+  onEnsureChatPath: (chatId: string) => void;
   onToggleSidebar: () => void;
   onNewChat: () => void;
 }
@@ -29,8 +33,20 @@ function getMessageText(
     .join("");
 }
 
+function hasToolParts(parts: Array<{ type?: string }>): boolean {
+  return parts.some((part) => {
+    if (typeof part.type !== "string") {
+      return false;
+    }
+    return part.type.startsWith("tool-");
+  });
+}
+
 export function ChatPanel({
+  chatId,
+  initialMessages,
   onEmailGenerated,
+  onEnsureChatPath,
   onToggleSidebar,
   onNewChat,
 }: ChatPanelProps) {
@@ -38,7 +54,10 @@ export function ChatPanel({
   const processedToolCallsRef = useRef<Set<string>>(new Set());
   const [input, setInput] = useState("");
 
-  const { messages, sendMessage, status, setMessages } = useChat();
+  const { messages, sendMessage, status, setMessages } = useChat({
+    id: chatId,
+    messages: initialMessages,
+  });
 
   const isLoading = status === "streaming" || status === "submitted";
 
@@ -77,6 +96,11 @@ export function ChatPanel({
   const handleSend = () => {
     const text = input.trim();
     if (!text || isLoading) return;
+
+    if (messages.length === 0) {
+      onEnsureChatPath(chatId);
+    }
+
     setInput("");
     sendMessage({ text });
   };
@@ -86,10 +110,9 @@ export function ChatPanel({
     return messages.filter((m) => {
       if (m.role === "user") return true;
       if (m.role === "assistant") {
-        const text = getMessageText(
-          m.parts as Array<{ type: string; text?: string }>
-        );
-        return text.trim().length > 0;
+        const parts = m.parts as Array<{ type?: string; text?: string }>;
+        const text = getMessageText(parts as Array<{ type: string; text?: string }>);
+        return text.trim().length > 0 || hasToolParts(parts);
       }
       return false;
     });
@@ -244,6 +267,7 @@ export function ChatPanel({
             content={getMessageText(
               message.parts as Array<{ type: string; text?: string }>
             )}
+            parts={message.parts as Array<Record<string, unknown>>}
           />
         ))}
         {isLoading && (

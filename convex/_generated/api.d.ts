@@ -8,10 +8,12 @@
  * @module
  */
 
+import type * as auth_helpers from "../auth_helpers.js";
 import type * as betterAuth_auth from "../betterAuth/auth.js";
-import type * as conversations from "../conversations.js";
+import type * as chats from "../chats.js";
 import type * as emails from "../emails.js";
 import type * as http from "../http.js";
+import type * as messages from "../messages.js";
 import type * as users from "../users.js";
 
 import type {
@@ -21,10 +23,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth_helpers: typeof auth_helpers;
   "betterAuth/auth": typeof betterAuth_auth;
-  conversations: typeof conversations;
+  chats: typeof chats;
   emails: typeof emails;
   http: typeof http;
+  messages: typeof messages;
   users: typeof users;
 }>;
 

@@ -11,7 +11,34 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_tokenIdentifier", ["tokenIdentifier"]),
 
+  chats: defineTable({
+    chatId: v.string(),
+    ownerUserId: v.id("users"),
+    title: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastMessageAt: v.number(),
+  })
+    .index("by_chatId", ["chatId"])
+    .index("by_owner", ["ownerUserId"])
+    .index("by_owner_updatedAt", ["ownerUserId", "updatedAt"]),
+
+  messages: defineTable({
+    chatId: v.string(),
+    ownerUserId: v.id("users"),
+    messageId: v.string(),
+    role: v.any(),
+    parts: v.array(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_chat", ["chatId"])
+    .index("by_chat_messageId", ["chatId", "messageId"])
+    .index("by_owner_chat_createdAt", ["ownerUserId", "chatId", "createdAt"]),
+
   emails: defineTable({
+    chatId: v.string(),
+    assistantMessageId: v.id("messages"),
     ownerUserId: v.id("users"),
     name: v.string(),
     description: v.string(),
@@ -19,19 +46,8 @@ export default defineSchema({
     htmlCode: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_owner", ["ownerUserId"]),
-
-  conversations: defineTable({
-    ownerUserId: v.id("users"),
-    emailId: v.optional(v.id("emails")),
-    messages: v.array(
-      v.object({
-        role: v.string(),
-        content: v.string(),
-        timestamp: v.number(),
-      })
-    ),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_owner", ["ownerUserId"]).index("by_email", ["emailId"]),
+  })
+    .index("by_owner", ["ownerUserId"])
+    .index("by_chat", ["chatId"])
+    .index("by_assistant_message", ["assistantMessageId"]),
 });
