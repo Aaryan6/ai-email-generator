@@ -51,6 +51,30 @@ export default defineSchema({
     .index("by_chat", ["chatId"])
     .index("by_assistant_message", ["assistantMessageId"]),
 
+  emailTemplates: defineTable({
+    ownerUserId: v.id("users"),
+    name: v.string(),
+    description: v.string(),
+    sourceKind: v.union(v.literal("html"), v.literal("tsx"), v.literal("both")),
+    htmlCode: v.string(),
+    tsxCode: v.optional(v.string()),
+    styleProfile: v.object({
+      colors: v.array(v.string()),
+      fontFamilies: v.array(v.string()),
+      maxWidth: v.optional(v.string()),
+      radiusValues: v.array(v.string()),
+      spacingValues: v.array(v.string()),
+      buttonBackgrounds: v.array(v.string()),
+      buttonTextColors: v.array(v.string()),
+      hasHeaderLikeSection: v.boolean(),
+      hasFooterLikeSection: v.boolean(),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner", ["ownerUserId"])
+    .index("by_owner_updatedAt", ["ownerUserId", "updatedAt"]),
+
   uploadedImages: defineTable({
     chatId: v.string(),
     ownerUserId: v.id("users"),

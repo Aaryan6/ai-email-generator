@@ -8,12 +8,25 @@ import { api } from "@/convex/_generated/api";
 
 export const maxDuration = 60;
 
+const clamp = (text: string, maxLength: number) => {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength)}...`;
+};
+
 export async function POST(req: Request) {
-  const { id, messages } = await req.json();
+  const { id, messages, templateIds } = await req.json();
 
   if (typeof id !== "string" || !Array.isArray(messages)) {
     return Response.json({ error: "Invalid request payload" }, { status: 400 });
   }
+
+  const safeTemplateIds = Array.isArray(templateIds)
+    ? templateIds
+        .filter((value): value is string => typeof value === "string")
+        .slice(0, 3)
+    : [];
 
   const uploadedImages = await fetchAuthQuery(api.images.listByChatId, {
     chatId: id,
@@ -27,9 +40,42 @@ export async function POST(req: Request) {
     )
     .join("\n");
 
-  const systemPrompt = imageContext
-    ? `${EMAIL_SYSTEM_PROMPT}\n\nUploaded images for this chat:\n${imageContext}\n\nIf the user asks for logos, illustrations, product images, avatars, hero images, icons, or card art, prefer these uploaded image URLs over placeholders.`
-    : EMAIL_SYSTEM_PROMPT;
+  const referenceTemplates =
+    safeTemplateIds.length > 0
+      ? await fetchAuthQuery(api.emails.getTemplateStyleReferences, {
+          ids: safeTemplateIds as never,
+        })
+      : [];
+
+  const templateContext = referenceTemplates
+    .map((template, index) => {
+      const style = template.styleProfile;
+      return [
+        `Template ${index + 1}: ${template.name}`,
+        `Description: ${template.description}`,
+        `Colors: ${style.colors.join(", ") || "not detected"}`,
+        `Fonts: ${style.fontFamilies.join(", ") || "not detected"}`,
+        `Max width: ${style.maxWidth ?? "not detected"}`,
+        `Radius values: ${style.radiusValues.join(", ") || "not detected"}`,
+        `Spacing values: ${style.spacingValues.join(", ") || "not detected"}`,
+        `Button backgrounds: ${style.buttonBackgrounds.join(", ") || "not detected"}`,
+        `Button text colors: ${style.buttonTextColors.join(", ") || "not detected"}`,
+        `Header-like section: ${style.hasHeaderLikeSection ? "yes" : "no"}`,
+        `Footer-like section: ${style.hasFooterLikeSection ? "yes" : "no"}`,
+        `HTML style excerpt:\n${clamp(template.htmlCode, 2400)}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+
+  const imagePromptSection = imageContext
+    ? `\n\nUploaded images for this chat:\n${imageContext}\n\nIf the user asks for logos, illustrations, product images, avatars, hero images, icons, or card art, prefer these uploaded image URLs over placeholders.`
+    : "";
+
+  const templatePromptSection = templateContext
+    ? `\n\nReference templates selected by the user:\n${templateContext}\n\nUse these references to keep a consistent visual theme across emails. Match color palette, typography feel, spacing rhythm, and CTA styling. Do not copy exact marketing text from references; only transfer style and layout language.`
+    : "";
+
+  const systemPrompt = `${EMAIL_SYSTEM_PROMPT}${imagePromptSection}${templatePromptSection}`;
 
   const tools = {
     generate_email: tool({
@@ -81,7 +127,7 @@ export async function POST(req: Request) {
     system: systemPrompt,
     messages: await convertToModelMessages(messages, { tools }),
     tools,
-    stopWhen: stepCountIs(3),
+    stopWhen: stepCountIs(6),
   });
 
   return result.toUIMessageStreamResponse({

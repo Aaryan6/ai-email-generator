@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
-import { Eye, Code2, Copy, Check, Download, AlertTriangle, ImagePlus, Link2, Loader2 } from "lucide-react";
+import { Eye, Code2, Copy, Check, Download, AlertTriangle, ImagePlus, Link2, Loader2, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmailPreview } from "./email-preview";
@@ -197,6 +197,10 @@ function EmailAssetsPanel({
 export function ArtifactPanel({ chatId, email, compilationError, onEnsureChatPath }: ArtifactPanelProps) {
   const [activeTab, setActiveTab] = useState<"preview" | "code" | "assets">("preview");
   const [copiedHtml, setCopiedHtml] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const saveTemplate = useMutation(api.emails.saveTemplate);
 
   const handleCopyHtml = async () => {
     if (!email) return;
@@ -215,6 +219,32 @@ export function ArtifactPanel({ chatId, email, compilationError, onEnsureChatPat
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const handleSaveTemplate = useCallback(async () => {
+    if (!email) {
+      return;
+    }
+
+    setTemplateError(null);
+    setTemplateSaved(false);
+    setIsSavingTemplate(true);
+
+    try {
+      onEnsureChatPath?.(chatId);
+      await saveTemplate({
+        name: email.name,
+        description: email.description,
+        htmlCode: email.htmlCode,
+        tsxCode: email.tsxCode || undefined,
+      });
+      setTemplateSaved(true);
+      setTimeout(() => setTemplateSaved(false), 2000);
+    } catch (error) {
+      setTemplateError(error instanceof Error ? error.message : "Failed to save template");
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  }, [chatId, email, onEnsureChatPath, saveTemplate]);
 
   return (
     <div className="flex h-full min-h-0 bg-background/60">
@@ -252,6 +282,15 @@ export function ArtifactPanel({ chatId, email, compilationError, onEnsureChatPat
               {copiedHtml ? "Copied" : "Copy HTML"}
             </Button>
             <Button
+              onClick={() => void handleSaveTemplate()}
+              disabled={!email?.htmlCode || isSavingTemplate}
+              variant="outline"
+              size="sm"
+            >
+              {isSavingTemplate ? <Loader2 data-icon="inline-start" className="animate-spin" /> : templateSaved ? <Check data-icon="inline-start" /> : <BookmarkPlus data-icon="inline-start" />}
+              {isSavingTemplate ? "Saving" : templateSaved ? "Saved" : "Save Template"}
+            </Button>
+            <Button
               onClick={handleDownloadHtml}
               disabled={!email?.htmlCode}
               variant="outline"
@@ -274,6 +313,12 @@ export function ArtifactPanel({ chatId, email, compilationError, onEnsureChatPat
             </div>
           </div>
         )}
+
+        {templateError ? (
+          <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive">
+            {templateError}
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-hidden">
           {activeTab === "assets" ? (

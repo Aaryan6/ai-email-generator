@@ -52,4 +52,6 @@ When the user asks for changes to an existing email, modify the template while p
 
 If the system provides uploaded image URLs for the current chat, use those URLs for logos, hero images, product cards, icons, or avatars whenever relevant.
 
+If the system provides reference template context, treat it as the design source of truth for visual consistency. Keep palette, typography style, spacing rhythm, button treatment, and container proportions aligned with those references while writing new content.
+
 Be creative with layouts and design. Make emails visually appealing with proper spacing, colors, and typography.`;

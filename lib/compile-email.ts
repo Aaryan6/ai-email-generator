@@ -6,7 +6,7 @@ import { render } from "@react-email/render";
 export async function compileEmail(tsxCode: string): Promise<string> {
   // Transform TSX to JavaScript using Sucrase
   const { code: jsCode } = transform(tsxCode, {
-    transforms: ["typescript", "jsx"],
+    transforms: ["typescript", "jsx", "imports"],
     jsxRuntime: "classic",
     jsxPragma: "React.createElement",
     jsxFragmentPragma: "React.Fragment",

@@ -1,8 +1,9 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import type { ChatStatus, FileUIPart, UIMessage } from "ai";
-import { MessageSquare, PanelLeftOpen, Plus, PlusIcon } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { DefaultChatTransport, type ChatStatus, type FileUIPart, type UIMessage } from "ai";
+import { MessageSquare, PanelLeftOpen, Plus, PlusIcon, Palette, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Attachment,
@@ -40,6 +41,28 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/convex/_generated/api";
 
 export interface EmailData {
   name: string;
@@ -57,6 +80,11 @@ interface ChatPanelProps {
   onEnsureChatPath: (chatId: string) => void;
   onToggleSidebar: () => void;
   onNewChat: () => void;
+}
+
+interface TemplateOption {
+  _id: string;
+  name: string;
 }
 
 function useDisplayMessages(messages: UIMessage[]) {
@@ -173,10 +201,36 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const processedToolCallsRef = useRef<Set<string>>(new Set());
   const [input, setInput] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("none");
+  const [isAddTemplateOpen, setIsAddTemplateOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateDescription, setTemplateDescription] = useState("");
+  const [templateCode, setTemplateCode] = useState("");
+  const [templateCodeType, setTemplateCodeType] = useState<"html" | "tsx">("html");
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [saveTemplateError, setSaveTemplateError] = useState<string | null>(null);
+  const saveTemplate = useMutation(api.emails.saveTemplate);
+
+  const templates = (useQuery(api.emails.listTemplates, {}) ?? []) as TemplateOption[];
+
+  const selectedTemplateIds = useMemo(
+    () => (selectedTemplateId === "none" ? [] : [selectedTemplateId]),
+    [selectedTemplateId],
+  );
+
+  const chatTransport = useMemo(() => {
+    return new DefaultChatTransport({
+      api: "/api/chat",
+      body: {
+        templateIds: selectedTemplateIds,
+      },
+    });
+  }, [selectedTemplateIds]);
 
   const { messages, sendMessage, status, setMessages } = useChat({
     id: chatId,
     messages: initialMessages,
+    transport: chatTransport,
   });
 
   const isStreaming = status === "streaming" || status === "submitted";
@@ -237,6 +291,70 @@ export function ChatPanel({
       files: message.files,
     });
     setInput("");
+  };
+
+  const handleManualTemplateSave = async () => {
+    const normalizedName = templateName.trim();
+    const normalizedDescription = templateDescription.trim();
+    const normalizedCode = templateCode.trim();
+
+    if (!normalizedName || !normalizedCode) {
+      setSaveTemplateError("Template name and code are required.");
+      return;
+    }
+
+    setSaveTemplateError(null);
+    setIsSavingTemplate(true);
+
+    try {
+      let htmlCode = normalizedCode;
+      let tsxCode: string | undefined;
+
+      if (templateCodeType === "tsx") {
+        tsxCode = normalizedCode;
+
+        const response = await fetch("/api/render-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tsxCode: normalizedCode,
+          }),
+        });
+
+        const payload = (await response.json()) as { htmlCode?: string; error?: string };
+        if (!response.ok || !payload.htmlCode) {
+          throw new Error(payload.error ?? "Could not compile TSX template.");
+        }
+
+        htmlCode = payload.htmlCode;
+      }
+
+      const insertedId = await saveTemplate({
+        name: normalizedName,
+        description: normalizedDescription || "Manual template",
+        htmlCode,
+        tsxCode,
+      });
+
+      setSelectedTemplateId(insertedId as string);
+      setTemplateName("");
+      setTemplateDescription("");
+      setTemplateCode("");
+      setTemplateCodeType("html");
+      setIsAddTemplateOpen(false);
+    } catch (error) {
+      setSaveTemplateError(
+        error instanceof Error ? error.message : "Failed to save template.",
+      );
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const handleThemeSelection = (value: string) => {
+    setSelectedTemplateId(value);
   };
 
   return (
@@ -370,8 +488,123 @@ export function ChatPanel({
             />
           </PromptInputBody>
           <PromptInputFooter className="pt-1">
+            <Dialog open={isAddTemplateOpen} onOpenChange={setIsAddTemplateOpen}>
+              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Add theme template</DialogTitle>
+                  <DialogDescription>
+                    Paste HTML or TSX code to save a reusable theme reference.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="template-name">Template name</Label>
+                    <Input
+                      id="template-name"
+                      placeholder="e.g. Product launch clean"
+                      value={templateName}
+                      onChange={(event) => setTemplateName(event.currentTarget.value)}
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="template-description">Description</Label>
+                    <Input
+                      id="template-description"
+                      placeholder="Optional description"
+                      value={templateDescription}
+                      onChange={(event) =>
+                        setTemplateDescription(event.currentTarget.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label>Code type</Label>
+                    <select
+                      value={templateCodeType}
+                      onChange={(event) =>
+                        setTemplateCodeType(event.currentTarget.value as "html" | "tsx")
+                      }
+                      className="border-input bg-input/30 h-9 w-[160px] rounded-4xl border px-3 text-sm outline-none"
+                    >
+                      <option value="html">HTML</option>
+                      <option value="tsx">TSX</option>
+                    </select>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="template-code">Template code</Label>
+                    <Textarea
+                      id="template-code"
+                      placeholder={
+                        templateCodeType === "html"
+                          ? "Paste full HTML email code"
+                          : "Paste full React Email TSX code"
+                      }
+                      value={templateCode}
+                      onChange={(event) => setTemplateCode(event.currentTarget.value)}
+                      className="h-52 min-h-52 max-h-52 overflow-y-auto font-mono text-xs"
+                    />
+                  </div>
+
+                  {saveTemplateError ? (
+                    <p className="text-xs text-destructive">{saveTemplateError}</p>
+                  ) : null}
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    onClick={() => void handleManualTemplateSave()}
+                    disabled={isSavingTemplate}
+                  >
+                    {isSavingTemplate ? (
+                      <Loader2 data-icon="inline-start" className="animate-spin" />
+                    ) : null}
+                    {isSavingTemplate ? "Saving" : "Save template"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <PromptInputTools>
               <PromptAddAttachmentButton />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 px-3">
+                    <Palette className="size-4" />
+                    <span className="text-xs">Theme</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuLabel>Choose theme</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={selectedTemplateId}
+                    onValueChange={handleThemeSelection}
+                  >
+                    <DropdownMenuRadioItem value="none">
+                      No reference template
+                    </DropdownMenuRadioItem>
+                    {templates.map((template) => (
+                      <DropdownMenuRadioItem key={template._id} value={template._id}>
+                        {template.name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      setSaveTemplateError(null);
+                      setIsAddTemplateOpen(true);
+                    }}
+                  >
+                    Paste HTML / TSX
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </PromptInputTools>
             <PromptSubmitButton input={input} status={status} />
           </PromptInputFooter>
