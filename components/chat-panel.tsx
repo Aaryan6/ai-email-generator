@@ -3,7 +3,15 @@
 import { useChat } from "@ai-sdk/react";
 import { useMutation, useQuery } from "convex/react";
 import { DefaultChatTransport, type ChatStatus, type FileUIPart, type UIMessage } from "ai";
-import { MessageSquare, PanelLeftOpen, Plus, PlusIcon, Palette, Loader2 } from "lucide-react";
+import {
+  MessageSquare,
+  PanelLeftOpen,
+  Plus,
+  PlusIcon,
+  Palette,
+  Loader2,
+  Filter,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -88,6 +96,21 @@ interface TemplateOption {
   _id: string;
   name: string;
 }
+
+type EmailCategoryOption = {
+  value: string;
+  label: string;
+};
+
+const EMAIL_CATEGORY_OPTIONS: EmailCategoryOption[] = [
+  { value: "auto", label: "Auto detect" },
+  { value: "marketing_newsletter", label: "Marketing Newsletter" },
+  { value: "product_launch", label: "Product Launch" },
+  { value: "cold_outreach_b2b", label: "Cold Outreach (B2B)" },
+  { value: "follow_up_nurture", label: "Follow-up / Nurture" },
+  { value: "promo_offer", label: "Promotional Offer" },
+  { value: "transactional_update", label: "Transactional Update" },
+];
 
 interface DailyPromptStatus {
   limit: number;
@@ -258,6 +281,8 @@ export function ChatPanel({
   const processedToolCallsRef = useRef<Set<string>>(new Set());
   const [input, setInput] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("none");
+  const [selectedEmailCategory, setSelectedEmailCategory] =
+    useState<string>("auto");
   const [isAddTemplateOpen, setIsAddTemplateOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
@@ -280,13 +305,17 @@ export function ChatPanel({
   );
 
   const chatTransport = useMemo(() => {
+    const emailCategory =
+      selectedEmailCategory === "auto" ? null : selectedEmailCategory;
+
     return new DefaultChatTransport({
       api: "/api/chat",
       body: {
         templateIds: selectedTemplateIds,
+        emailCategory,
       },
     });
-  }, [selectedTemplateIds]);
+  }, [selectedTemplateIds, selectedEmailCategory]);
 
   const { messages, sendMessage, status, setMessages } = useChat({
     id: chatId,
@@ -440,6 +469,14 @@ export function ChatPanel({
   const handleThemeSelection = (value: string) => {
     setSelectedTemplateId(value);
   };
+
+  const handleCategorySelection = (value: string) => {
+    setSelectedEmailCategory(value);
+  };
+
+  const activeEmailCategoryLabel =
+    EMAIL_CATEGORY_OPTIONS.find((option) => option.value === selectedEmailCategory)
+      ?.label ?? "Auto detect";
 
   return (
     <div className="flex h-full flex-col bg-card/80 backdrop-blur">
@@ -690,6 +727,32 @@ export function ChatPanel({
                     }}
                   >
                     Paste HTML / TSX
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 px-3">
+                    <Filter className="size-4" />
+                    <span className="text-xs">Category</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuLabel>Email category</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={selectedEmailCategory}
+                    onValueChange={handleCategorySelection}
+                  >
+                    {EMAIL_CATEGORY_OPTIONS.map((option) => (
+                      <DropdownMenuRadioItem key={option.value} value={option.value}>
+                        {option.label}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                    Active: {activeEmailCategoryLabel}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

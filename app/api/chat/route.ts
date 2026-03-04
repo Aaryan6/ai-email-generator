@@ -1,14 +1,15 @@
 import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
+import { google } from "@ai-sdk/google";
 import { z } from "zod";
-import { openrouter } from "@/lib/openrouter";
 import { EMAIL_SYSTEM_PROMPT } from "@/lib/email-system-prompt";
+import { buildCategoryPrompt } from "@/lib/prompts/saas-email";
 import { compileEmail } from "@/lib/compile-email";
 import { fetchAuthMutation, fetchAuthQuery } from "@/lib/auth-server";
 import { api } from "@/convex/_generated/api";
 
 export const maxDuration = 60;
 
-const defaultModel = "google/gemini-3-flash-preview";
+const defaultModel = "gemini-3.1-flash-lite-preview";
 
 const clamp = (text: string, maxLength: number) => {
   if (text.length <= maxLength) {
@@ -17,8 +18,106 @@ const clamp = (text: string, maxLength: number) => {
   return `${text.slice(0, maxLength)}...`;
 };
 
+const extractLatestUserText = (messages: unknown[]): string => {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (typeof message !== "object" || message === null) {
+      continue;
+    }
+
+    const row = message as {
+      role?: unknown;
+      content?: unknown;
+      parts?: unknown;
+    };
+
+    if (row.role !== "user") {
+      continue;
+    }
+
+    if (typeof row.content === "string" && row.content.trim()) {
+      return row.content.trim();
+    }
+
+    if (Array.isArray(row.parts)) {
+      const chunks: string[] = [];
+      for (const part of row.parts) {
+        if (typeof part !== "object" || part === null) {
+          continue;
+        }
+        const candidate = part as { text?: unknown; type?: unknown };
+        if (typeof candidate.text === "string" && candidate.text.trim()) {
+          chunks.push(candidate.text.trim());
+        } else if (
+          candidate.type === "text" &&
+          typeof candidate.text === "string" &&
+          candidate.text.trim()
+        ) {
+          chunks.push(candidate.text.trim());
+        }
+      }
+
+      if (chunks.length > 0) {
+        return chunks.join("\n");
+      }
+    }
+  }
+
+  return "";
+};
+
+const inferCategoryFromText = (text: string): string | null => {
+  const normalized = text.toLowerCase();
+
+  if (
+    /cold|outreach|prospect|prospecting|sales email|follow up on my last email|book a call|book a meeting|reply rate/.test(
+      normalized,
+    )
+  ) {
+    return "cold_outreach_b2b";
+  }
+
+  if (
+    /newsletter|weekly update|monthly update|digest|roundup|round-up/.test(
+      normalized,
+    )
+  ) {
+    return "marketing_newsletter";
+  }
+
+  if (/launch|announcement|new feature|changelog|release/.test(normalized)) {
+    return "product_launch";
+  }
+
+  if (
+    /follow up|follow-up|nurture|re-engage|reactivation|win back|win-back/.test(
+      normalized,
+    )
+  ) {
+    return "follow_up_nurture";
+  }
+
+  if (
+    /discount|offer|sale|promo|promotion|black friday|coupon|limited time/.test(
+      normalized,
+    )
+  ) {
+    return "promo_offer";
+  }
+
+  if (
+    /password reset|receipt|invoice|order confirmation|order shipped|verification|otp|transactional/.test(
+      normalized,
+    )
+  ) {
+    return "transactional_update";
+  }
+
+  return null;
+};
+
 export async function POST(req: Request) {
-  const { id, messages, templateIds } = await req.json();
+  const { id, messages, templateIds, emailCategory } = await req.json();
 
   if (typeof id !== "string" || !Array.isArray(messages)) {
     return Response.json({ error: "Invalid request payload" }, { status: 400 });
@@ -87,7 +186,19 @@ export async function POST(req: Request) {
     ? `\n\nReference templates selected by the user:\n${templateContext}\n\nUse these references to keep a consistent visual theme across emails. Match color palette, typography feel, spacing rhythm, and CTA styling. Do not copy exact marketing text from references; only transfer style and layout language.`
     : "";
 
-  const systemPrompt = `${EMAIL_SYSTEM_PROMPT}${imagePromptSection}${templatePromptSection}`;
+  const latestUserText = extractLatestUserText(messages);
+  const inferredCategory = inferCategoryFromText(latestUserText);
+  const explicitCategory =
+    typeof emailCategory === "string" && emailCategory.trim()
+      ? emailCategory.trim()
+      : null;
+  const categoryPrompt = buildCategoryPrompt(explicitCategory ?? inferredCategory);
+
+  const categoryPromptSection = categoryPrompt
+    ? `\n\nCampaign category guidance:\n${categoryPrompt}\n\nApply these category rules while still following all core system rules.`
+    : "";
+
+  const systemPrompt = `${EMAIL_SYSTEM_PROMPT}${imagePromptSection}${templatePromptSection}${categoryPromptSection}`;
 
   const tools = {
     generate_email: tool({
@@ -135,11 +246,7 @@ export async function POST(req: Request) {
   };
 
   const result = streamText({
-    model: openrouter(process.env.OPENROUTER_MODEL?.trim() || defaultModel, {
-      provider: {
-        sort: "latency",
-      },
-    }),
+    model: google(process.env.GOOGLE_MODEL?.trim() || defaultModel),
     system: systemPrompt,
     messages: await convertToModelMessages(messages, { tools }),
     tools,
